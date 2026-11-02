@@ -83,9 +83,12 @@ def main():
     assert layout['LayoutID'] == LAYOUT and len(layout['PathMapRef']) == 1
     ref = layout['PathMapRef'][0]
     assert ref['CodecID'] == [CODEC] and ref['PathMapID'] == LAYOUT
-    assert ref['Inputs'] == ['Mic'] and ref['Outputs'] == ['IntSpeaker', 'Headphone']
+    assert ref['Inputs'] == ['Mic', 'LineIn']
+    assert ref['Outputs'] == ['IntSpeaker', 'Headphone']
     assert len(platform['PathMaps']) == 1
     assert platform['PathMaps'][0]['PathMapID'] == LAYOUT
+    groups = platform['PathMaps'][0]['PathMap']
+    assert len(groups) == 3 and [len(group) for group in groups] == [1, 1, 2]
     paths = []
 
     def walk(item):
@@ -96,8 +99,10 @@ def main():
                 for child in item:
                     walk(child)
 
-    walk(platform['PathMaps'][0]['PathMap'])
-    assert sorted(paths) == sorted([[7, 0x24, 0x12], [0x14, 2], [0x21, 3]])
+    walk(groups)
+    assert sorted(paths) == sorted([
+        [7, 0x24, 0x12], [9, 0x22, 0x19], [0x14, 2], [0x21, 3]
+    ])
     for path in paths if nodes else []:
         for node, upstream in zip(path, path[1:]):
             match = re.search(r'Connection: \d+\s*\n([^\n]+)', nodes[node])
@@ -115,9 +120,15 @@ def main():
         node, command, payload = (value >> 20) & 255, (value >> 8) & 0xFFF, value & 255
         if 0x71C <= command <= 0x71F:
             reconstructed[node] = reconstructed.get(node, 0) | (payload << ((command - 0x71C)*8))
+    assert reconstructed[0x19] == 0x04811020, 'Headset mic must be exposed as Line In'
     if pins:
-        assert reconstructed == pins, 'Pin defaults differ from the dump'
-    assert {n for n, value in reconstructed.items() if value >> 30 != 1} == {0x12, 0x14, 0x21}
+        assert pins[0x19] == 0x411111F0, 'Expected disabled 0x19 in the stock dump'
+        assert {n: value for n, value in reconstructed.items() if n != 0x19} == {
+            n: value for n, value in pins.items() if n != 0x19
+        }, 'Unchanged pin defaults differ from the dump'
+    assert {n for n, value in reconstructed.items() if value >> 30 != 1} == {
+        0x12, 0x14, 0x19, 0x21
+    }
     assert pin['WakeVerbReinit'] is True
     if args.kext:
         built = plist((args.kext / 'Contents/Info.plist').read_bytes())
@@ -130,7 +141,7 @@ def main():
         print(f'PASS: built {built["CFBundleVersion"]} x86_64 resources and pin configuration match source')
     print('PASS: layout29 and PathMap29 resource consistency')
     if args.dump:
-        print('PASS: all pin defaults and three routes match the private codec dump')
+        print('PASS: four routes are connected; unchanged pins match the private codec dump')
 
 
 if __name__ == '__main__':
