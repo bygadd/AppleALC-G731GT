@@ -1,7 +1,7 @@
 AppleALC
 ========
 
-ASUS ROG STRIX G731GT-H7114 support: [layout 29, routing and test notes](Documentation/G731GT.md). Speakers, headphones and both microphones have been tested on macOS Tahoe.
+I built and tested [ALC294 layout 29 for my ASUS ROG STRIX G731GT-H7114](Documentation/G731GT.md). I confirmed speakers, headphones and both microphones on macOS Tahoe.
 
 [![Build Status](https://github.com/acidanthera/AppleALC/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/acidanthera/AppleALC/actions) [![Scan Status](https://scan.coverity.com/projects/16166/badge.svg?flat=1)](https://scan.coverity.com/projects/16166)
 
